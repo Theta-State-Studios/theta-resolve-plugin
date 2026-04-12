@@ -37,6 +37,7 @@
             "category": "public.app-category.productivity",
             "icon": "img/icon.png",
             "identity": null,
+            "x64ArchFiles": "**/WorkflowIntegration.node",
             "extraResources": [
                 {
                     "from": "native/mac/WorkflowIntegration.node",
