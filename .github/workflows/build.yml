@@ -10,60 +10,74 @@ permissions:
 
 jobs:
   build-mac:
-    name: Build macOS
+    name: Build macOS DMG
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'Theta Review/package-lock.json'
+      - name: Stage plugin files
+        run: |
+          mkdir -p staging/plugin
+          # Copy all plugin source files
+          cp "Theta Review/manifest.xml"  staging/plugin/
+          cp "Theta Review/main.js"       staging/plugin/
+          cp "Theta Review/preload.js"    staging/plugin/
+          cp "Theta Review/index.html"    staging/plugin/
+          cp -r "Theta Review/js"         staging/plugin/
+          cp -r "Theta Review/css"        staging/plugin/
+          cp -r "Theta Review/img"        staging/plugin/
+          # Place the Mac .node at the plugin root (where Resolve expects it)
+          cp "Theta Review/native/mac/WorkflowIntegration.node" staging/plugin/
+          # Copy install script
+          cp "installer/mac/Install Theta Review.command" staging/
+          chmod +x "staging/Install Theta Review.command"
 
-      - name: Install dependencies
-        working-directory: 'Theta Review'
-        run: npm ci
-
-      - name: Build macOS DMG
-        working-directory: 'Theta Review'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:mac
+      - name: Create DMG
+        run: |
+          hdiutil create \
+            -volname "Theta Review" \
+            -srcfolder staging \
+            -ov -format UDZO \
+            "ThetaReview-${{ github.ref_name }}-mac.dmg"
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mac-dist
-          path: 'Theta Review/dist/*.dmg'
+          name: mac-dmg
+          path: "ThetaReview-${{ github.ref_name }}-mac.dmg"
 
   build-win:
-    name: Build Windows
+    name: Build Windows ZIP
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'Theta Review/package-lock.json'
+      - name: Stage plugin files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path staging/plugin | Out-Null
+          Copy-Item "Theta Review/manifest.xml" staging/plugin/
+          Copy-Item "Theta Review/main.js"      staging/plugin/
+          Copy-Item "Theta Review/preload.js"   staging/plugin/
+          Copy-Item "Theta Review/index.html"   staging/plugin/
+          Copy-Item -Recurse "Theta Review/js"  staging/plugin/
+          Copy-Item -Recurse "Theta Review/css" staging/plugin/
+          Copy-Item -Recurse "Theta Review/img" staging/plugin/
+          # Place the Windows .node at the plugin root
+          Copy-Item "Theta Review/native/win/WorkflowIntegration.node" staging/plugin/
+          # Copy install script
+          Copy-Item "installer/win/Install Theta Review.bat" staging/
 
-      - name: Install dependencies
-        working-directory: 'Theta Review'
-        run: npm ci
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path staging/* -DestinationPath "ThetaReview-${{ github.ref_name }}-windows.zip"
 
-      - name: Build Windows installer
-        working-directory: 'Theta Review'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run dist:win
-
-      - name: Upload EXE artifact
+      - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4
         with:
-          name: win-dist
-          path: 'Theta Review/dist/*.exe'
+          name: win-zip
+          path: "ThetaReview-${{ github.ref_name }}-windows.zip"
 
   publish:
     name: Publish GitHub Release
@@ -72,12 +86,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: mac-dist
+          name: mac-dmg
           path: dist/
 
       - uses: actions/download-artifact@v4
         with:
-          name: win-dist
+          name: win-zip
           path: dist/
 
       - name: Create GitHub Release

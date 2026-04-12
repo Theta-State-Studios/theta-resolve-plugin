@@ -1,26 +1,23 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const https = require('https');
 const http = require('http');
-const { autoUpdater } = require('electron-updater');
 
 // Load the platform-specific Resolve scripting bridge.
-// In packaged builds, electron-builder places it in process.resourcesPath via extraResources.
-// In dev, load from native/<platform>/.
-const nativePath = app.isPackaged
-    ? path.join(process.resourcesPath, 'WorkflowIntegration.node')
-    : path.join(__dirname, 'native', process.platform === 'win32' ? 'win' : 'mac', 'WorkflowIntegration.node');
-const WorkflowIntegration = require(nativePath);
+// When installed as a Resolve plugin, WorkflowIntegration.node sits at the plugin root.
+// In dev, fall back to native/<platform>/ so we don't need to keep the root copy in git.
+const rootNodePath = path.join(__dirname, 'WorkflowIntegration.node');
+const devNodePath  = path.join(__dirname, 'native', process.platform === 'win32' ? 'win' : 'mac', 'WorkflowIntegration.node');
+const WorkflowIntegration = require(fs.existsSync(rootNodePath) ? rootNodePath : devNodePath);
 
 const PLUGIN_ID = 'com.theta-studios.review';
 
-// Config and credentials live in userData so they survive app updates.
-// macOS: ~/Library/Application Support/theta-review/
-// Windows: %APPDATA%\theta-review\
-const SETTINGS_PATH = path.join(app.getPath('userData'), 'config.json');
-const CREDS_PATH = path.join(app.getPath('userData'), 'credentials.json');
+// Config lives in ~/.theta-review/ so it survives plugin updates (which overwrite the plugin folder).
+const CONFIG_DIR    = path.join(os.homedir(), '.theta-review');
+const SETTINGS_PATH = path.join(CONFIG_DIR, 'config.json');
+const CREDS_PATH    = path.join(CONFIG_DIR, 'credentials.json');
 
 // Credential keys — always stored in credentials.json, never in config.json
 const CREDENTIAL_KEYS = new Set(['auth_token', 'watcher_secret', 'jira_user', 'display_name']);
@@ -54,7 +51,12 @@ let renderCompleteResolver = null;
 
 // ── Config ──
 
+function ensureConfigDir() {
+    if (!fs.existsSync(CONFIG_DIR)) fs.mkdirSync(CONFIG_DIR, { recursive: true });
+}
+
 function loadConfig() {
+    ensureConfigDir();
     let settings = {};
     let creds = {};
 
@@ -941,44 +943,54 @@ function createWindow() {
 app.whenReady().then(() => {
     registerHandlers();
     createWindow();
-    checkForUpdates();
+    // Delay version check so it doesn't block the window appearing
+    setTimeout(checkPortalVersion, 3000);
 });
 
-function checkForUpdates() {
-    if (!app.isPackaged) return; // skip in dev
+function currentPluginVersion() {
+    try {
+        const manifest = fs.readFileSync(path.join(__dirname, 'manifest.xml'), 'utf8');
+        const m = manifest.match(/<Version>(.*?)<\/Version>/);
+        return m ? m[1] : '0.0.0';
+    } catch { return '0.0.0'; }
+}
 
-    autoUpdater.autoDownload = false;
-    autoUpdater.logger = null;
+function compareVersions(a, b) {
+    const pa = a.split('.').map(Number);
+    const pb = b.split('.').map(Number);
+    for (let i = 0; i < 3; i++) {
+        if ((pa[i] || 0) > (pb[i] || 0)) return 1;
+        if ((pa[i] || 0) < (pb[i] || 0)) return -1;
+    }
+    return 0;
+}
 
-    autoUpdater.on('update-available', (info) => {
-        dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Update Available',
-            message: `Theta Review ${info.version} is available.`,
-            detail: 'Download and install now? The app will restart automatically.',
-            buttons: ['Update Now', 'Later'],
-            defaultId: 0,
-        }).then(({ response }) => {
+async function checkPortalVersion() {
+    try {
+        const config = loadConfig();
+        if (!config.portal_url) return;
+
+        const res = await fetch(`${config.portal_url}/api/plugin/version`);
+        if (!res.ok) return;
+        const { version: latest } = await res.json();
+        const current = currentPluginVersion();
+
+        if (compareVersions(latest, current) > 0) {
+            const { response } = await dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'Update Available',
+                message: `Theta Review ${latest} is available (you have ${current}).`,
+                detail: 'Download the new installer from GitHub and run it to update.',
+                buttons: ['Download', 'Later'],
+                defaultId: 0,
+            });
             if (response === 0) {
-                autoUpdater.downloadUpdate();
+                shell.openExternal('https://github.com/Theta-State-Studios/theta-resolve-plugin/releases/latest');
             }
-        });
-    });
-
-    autoUpdater.on('update-downloaded', () => {
-        dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Update Ready',
-            message: 'Update downloaded. The app will restart now.',
-            buttons: ['Restart'],
-        }).then(() => {
-            autoUpdater.quitAndInstall();
-        });
-    });
-
-    autoUpdater.checkForUpdates().catch(() => {
-        // Silently ignore — no internet, no GitHub release, etc.
-    });
+        }
+    } catch {
+        // Silently ignore — offline, portal unreachable, etc.
+    }
 }
 
 app.on('window-all-closed', () => {
