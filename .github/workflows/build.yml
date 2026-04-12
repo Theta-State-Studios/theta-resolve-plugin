@@ -24,32 +24,33 @@ jobs:
           sed -i '' "s|<Version>.*</Version>|<Version>${{ steps.version.outputs.version }}</Version>|" \
             "Theta Review/manifest.xml"
 
-      - name: Stage payload
+      - name: Stage plugin and bundle into tar
         run: |
-          mkdir -p pkg-payload
-          cp "Theta Review/manifest.xml"  pkg-payload/
-          cp "Theta Review/main.js"       pkg-payload/
-          cp "Theta Review/preload.js"    pkg-payload/
-          cp "Theta Review/index.html"    pkg-payload/
-          cp -r "Theta Review/js"         pkg-payload/
-          cp -r "Theta Review/css"        pkg-payload/
-          cp -r "Theta Review/img"        pkg-payload/
-          cp "Theta Review/native/mac/WorkflowIntegration.node" pkg-payload/
+          mkdir -p pkg-staging
+          cp "Theta Review/manifest.xml"  pkg-staging/
+          cp "Theta Review/main.js"       pkg-staging/
+          cp "Theta Review/preload.js"    pkg-staging/
+          cp "Theta Review/index.html"    pkg-staging/
+          cp -r "Theta Review/js"         pkg-staging/
+          cp -r "Theta Review/css"        pkg-staging/
+          cp -r "Theta Review/img"        pkg-staging/
+          cp "Theta Review/native/mac/WorkflowIntegration.node" pkg-staging/
+          # Bundle into archive alongside postinstall — extracted by postinstall at install time
+          tar -czf installer/mac/scripts/plugin.tar.gz -C pkg-staging .
 
       - name: Build PKG
         run: |
           chmod +x installer/mac/scripts/postinstall
 
-          # Component package: installs payload to a temp dir, postinstall moves it
+          # Scripts-only package — no payload, postinstall extracts plugin.tar.gz
           pkgbuild \
-            --root          pkg-payload \
-            --install-location /private/tmp/theta-review-payload \
+            --nopayload \
             --scripts       installer/mac/scripts \
             --identifier    com.theta-studios.review \
             --version       "${{ steps.version.outputs.version }}" \
             ThetaReview-component.pkg
 
-          # Distribution package: adds welcome screen and nice UI
+          # Wrap with productbuild for welcome screen and standard macOS installer UI
           productbuild \
             --distribution  installer/mac/distribution.xml \
             --package-path  . \

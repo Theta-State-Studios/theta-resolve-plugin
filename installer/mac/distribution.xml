@@ -2,8 +2,7 @@
 <installer-gui-script minSpecVersion="2">
     <title>Theta Review</title>
     <organization>com.theta-studios</organization>
-    <domains enable_localSystem="false" enable_currentUserHome="true" enable_anywhere="false"/>
-    <options customize="never" require-scripts="true" rootVolumeOnly="false"/>
+    <options customize="never" require-scripts="false"/>
     <welcome file="welcome.html" mime-type="text/html"/>
     <choices-outline>
         <line choice="com.theta-studios.review"/>

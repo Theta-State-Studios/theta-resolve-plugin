@@ -1,23 +1,22 @@
 #!/bin/bash
 set -e
 
-# Get the logged-in GUI user — postinstall runs as root so we can't use $HOME
+# Get the logged-in GUI user — postinstall runs as root
 CURRENT_USER=$(stat -f%Su /dev/console 2>/dev/null || echo "")
 if [ -z "$CURRENT_USER" ] || [ "$CURRENT_USER" = "root" ]; then
-    CURRENT_USER=$(scutil <<< "show State:/Users/ConsoleUser" 2>/dev/null | awk '/Name :/ && !/loginwindow/ { print $3 }')
+    CURRENT_USER=$(scutil <<< "show State:/Users/ConsoleUser" 2>/dev/null \
+        | awk '/Name :/ && !/loginwindow/ { print $3 }')
 fi
 
-USER_HOME=$(dscl . -read "/Users/$CURRENT_USER" NFSHomeDirectory 2>/dev/null | awk '{ print $2 }')
-if [ -z "$USER_HOME" ]; then
-    USER_HOME="/Users/$CURRENT_USER"
-fi
-
+USER_HOME=$(eval echo ~"$CURRENT_USER")
 DEST="$USER_HOME/Library/Application Support/Blackmagic Design/DaVinci Resolve/Support/Workflow Integration Plugins/Theta Review"
-PAYLOAD="/private/tmp/theta-review-payload"
 
+# plugin.tar.gz lives alongside this script in the scripts directory
+SCRIPTS_DIR="$(dirname "$0")"
+
+rm -rf "$DEST"
 mkdir -p "$DEST"
-cp -r "$PAYLOAD/"* "$DEST/"
+tar -xzf "$SCRIPTS_DIR/plugin.tar.gz" -C "$DEST"
 chown -R "$CURRENT_USER" "$DEST"
-rm -rf "$PAYLOAD"
 
 exit 0
