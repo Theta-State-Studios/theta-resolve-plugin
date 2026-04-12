@@ -19,7 +19,9 @@ SetCompressor   lzma
 ; Pages
 !include "MUI2.nsh"
 !define MUI_ABORTWARNING
-!define MUI_ICON "..\..\Theta Review\img\icon.png"
+!ifdef ICONFILE
+  !define MUI_ICON "${ICONFILE}"
+!endif
 !define MUI_WELCOMEPAGE_TITLE "Theta Review ${VERSION}"
 !define MUI_WELCOMEPAGE_TEXT  "This will install the Theta Review plugin for DaVinci Resolve.$\r$\n$\r$\nThe plugin will be placed in:$\r$\n$APPDATA\Blackmagic Design\DaVinci Resolve\Support\Workflow Integration Plugins\$\r$\n$\r$\nClick Install to continue."
 !define MUI_FINISHPAGE_TITLE  "Installation Complete"

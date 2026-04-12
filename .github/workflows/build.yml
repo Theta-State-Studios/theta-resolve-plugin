@@ -99,11 +99,19 @@ jobs:
       - name: Install NSIS
         run: choco install nsis --no-progress -y
 
+      - name: Convert icon PNG to ICO
+        shell: pwsh
+        run: |
+          magick "Theta Review/img/icon.png" -resize 256x256 installer/win/icon.ico
+
       - name: Build EXE
         shell: pwsh
         working-directory: installer/win
         run: |
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=${{ steps.version.outputs.version }} installer.nsi
+          & "C:\Program Files (x86)\NSIS\makensis.exe" `
+            /DVERSION=${{ steps.version.outputs.version }} `
+            /DICONFILE=icon.ico `
+            installer.nsi
 
       - name: Rename output
         shell: pwsh
