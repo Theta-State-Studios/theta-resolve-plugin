@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>Theta Review</title>
+    <organization>com.theta-studios</organization>
+    <domains enable_localSystem="false" enable_currentUserHome="true" enable_anywhere="false"/>
+    <options customize="never" require-scripts="true" rootVolumeOnly="false"/>
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <choices-outline>
+        <line choice="com.theta-studios.review"/>
+    </choices-outline>
+    <choice id="com.theta-studios.review" visible="false" title="Theta Review">
+        <pkg-ref id="com.theta-studios.review"/>
+    </choice>
+    <pkg-ref id="com.theta-studios.review" onConclusion="none">ThetaReview-component.pkg</pkg-ref>
+</installer-gui-script>

@@ -10,89 +10,111 @@ permissions:
 
 jobs:
   build-mac:
-    name: Build macOS DMG
+    name: Build macOS PKG
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
       - name: Stamp version into manifest.xml
         run: |
-          VERSION="${{ github.ref_name }}"
-          VERSION="${VERSION#v}"
-          sed -i '' "s|<Version>.*</Version>|<Version>${VERSION}</Version>|" "Theta Review/manifest.xml"
-          echo "Plugin version set to ${VERSION}"
+          sed -i '' "s|<Version>.*</Version>|<Version>${{ steps.version.outputs.version }}</Version>|" \
+            "Theta Review/manifest.xml"
 
-      - name: Stage plugin files
+      - name: Stage payload
         run: |
-          mkdir -p staging/plugin
-          # Copy all plugin source files
-          cp "Theta Review/manifest.xml"  staging/plugin/
-          cp "Theta Review/main.js"       staging/plugin/
-          cp "Theta Review/preload.js"    staging/plugin/
-          cp "Theta Review/index.html"    staging/plugin/
-          cp -r "Theta Review/js"         staging/plugin/
-          cp -r "Theta Review/css"        staging/plugin/
-          cp -r "Theta Review/img"        staging/plugin/
-          # Place the Mac .node at the plugin root (where Resolve expects it)
-          cp "Theta Review/native/mac/WorkflowIntegration.node" staging/plugin/
-          # Copy install script
-          cp "installer/mac/Install Theta Review.command" staging/
-          chmod +x "staging/Install Theta Review.command"
+          mkdir -p pkg-payload
+          cp "Theta Review/manifest.xml"  pkg-payload/
+          cp "Theta Review/main.js"       pkg-payload/
+          cp "Theta Review/preload.js"    pkg-payload/
+          cp "Theta Review/index.html"    pkg-payload/
+          cp -r "Theta Review/js"         pkg-payload/
+          cp -r "Theta Review/css"        pkg-payload/
+          cp -r "Theta Review/img"        pkg-payload/
+          cp "Theta Review/native/mac/WorkflowIntegration.node" pkg-payload/
 
-      - name: Create DMG
+      - name: Build PKG
         run: |
-          hdiutil create \
-            -volname "Theta Review" \
-            -srcfolder staging \
-            -ov -format UDZO \
-            "ThetaReview-${{ github.ref_name }}-mac.dmg"
+          chmod +x installer/mac/scripts/postinstall
 
-      - name: Upload DMG artifact
+          # Component package: installs payload to a temp dir, postinstall moves it
+          pkgbuild \
+            --root          pkg-payload \
+            --install-location /private/tmp/theta-review-payload \
+            --scripts       installer/mac/scripts \
+            --identifier    com.theta-studios.review \
+            --version       "${{ steps.version.outputs.version }}" \
+            ThetaReview-component.pkg
+
+          # Distribution package: adds welcome screen and nice UI
+          productbuild \
+            --distribution  installer/mac/distribution.xml \
+            --package-path  . \
+            --resources     installer/mac/welcome \
+            "ThetaReview-${{ github.ref_name }}-mac.pkg"
+
+      - name: Upload PKG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mac-dmg
-          path: "ThetaReview-${{ github.ref_name }}-mac.dmg"
+          name: mac-pkg
+          path: "ThetaReview-${{ github.ref_name }}-mac.pkg"
 
   build-win:
-    name: Build Windows ZIP
+    name: Build Windows EXE
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set version
+        id: version
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}" -replace '^v', ''
+          echo "version=$v" >> $env:GITHUB_OUTPUT
+
       - name: Stamp version into manifest.xml
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}" -replace '^v', ''
-          (Get-Content "Theta Review/manifest.xml") -replace '<Version>.*</Version>', "<Version>$version</Version>" |
+          $v = "${{ steps.version.outputs.version }}"
+          (Get-Content "Theta Review/manifest.xml") `
+            -replace '<Version>.*</Version>', "<Version>$v</Version>" |
             Set-Content "Theta Review/manifest.xml"
-          Write-Host "Plugin version set to $version"
 
       - name: Stage plugin files
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path staging/plugin | Out-Null
-          Copy-Item "Theta Review/manifest.xml" staging/plugin/
-          Copy-Item "Theta Review/main.js"      staging/plugin/
-          Copy-Item "Theta Review/preload.js"   staging/plugin/
-          Copy-Item "Theta Review/index.html"   staging/plugin/
-          Copy-Item -Recurse "Theta Review/js"  staging/plugin/
-          Copy-Item -Recurse "Theta Review/css" staging/plugin/
-          Copy-Item -Recurse "Theta Review/img" staging/plugin/
-          # Place the Windows .node at the plugin root
-          Copy-Item "Theta Review/native/win/WorkflowIntegration.node" staging/plugin/
-          # Copy install script
-          Copy-Item "installer/win/Install Theta Review.bat" staging/
+          New-Item -ItemType Directory -Force -Path installer/win/plugin | Out-Null
+          Copy-Item "Theta Review/manifest.xml" installer/win/plugin/
+          Copy-Item "Theta Review/main.js"      installer/win/plugin/
+          Copy-Item "Theta Review/preload.js"   installer/win/plugin/
+          Copy-Item "Theta Review/index.html"   installer/win/plugin/
+          Copy-Item -Recurse "Theta Review/js"  installer/win/plugin/
+          Copy-Item -Recurse "Theta Review/css" installer/win/plugin/
+          Copy-Item -Recurse "Theta Review/img" installer/win/plugin/
+          Copy-Item "Theta Review/native/win/WorkflowIntegration.node" installer/win/plugin/
 
-      - name: Create ZIP
+      - name: Install NSIS
+        run: choco install nsis --no-progress -y
+
+      - name: Build EXE
+        working-directory: installer/win
+        run: |
+          makensis /DVERSION=${{ steps.version.outputs.version }} installer.nsi
+
+      - name: Rename output
         shell: pwsh
         run: |
-          Compress-Archive -Path staging/* -DestinationPath "ThetaReview-${{ github.ref_name }}-windows.zip"
+          Move-Item "installer/win/ThetaReview-${{ steps.version.outputs.version }}-windows.exe" `
+                    "ThetaReview-${{ github.ref_name }}-windows.exe"
 
-      - name: Upload ZIP artifact
+      - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
-          name: win-zip
-          path: "ThetaReview-${{ github.ref_name }}-windows.zip"
+          name: win-exe
+          path: "ThetaReview-${{ github.ref_name }}-windows.exe"
 
   publish:
     name: Publish GitHub Release
@@ -101,12 +123,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: mac-dmg
+          name: mac-pkg
           path: dist/
 
       - uses: actions/download-artifact@v4
         with:
-          name: win-zip
+          name: win-exe
           path: dist/
 
       - name: Create GitHub Release

@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+# Get the logged-in GUI user — postinstall runs as root so we can't use $HOME
+CURRENT_USER=$(stat -f%Su /dev/console 2>/dev/null || echo "")
+if [ -z "$CURRENT_USER" ] || [ "$CURRENT_USER" = "root" ]; then
+    CURRENT_USER=$(scutil <<< "show State:/Users/ConsoleUser" 2>/dev/null | awk '/Name :/ && !/loginwindow/ { print $3 }')
+fi
+
+USER_HOME=$(dscl . -read "/Users/$CURRENT_USER" NFSHomeDirectory 2>/dev/null | awk '{ print $2 }')
+if [ -z "$USER_HOME" ]; then
+    USER_HOME="/Users/$CURRENT_USER"
+fi
+
+DEST="$USER_HOME/Library/Application Support/Blackmagic Design/DaVinci Resolve/Support/Workflow Integration Plugins/Theta Review"
+PAYLOAD="/private/tmp/theta-review-payload"
+
+mkdir -p "$DEST"
+cp -r "$PAYLOAD/"* "$DEST/"
+chown -R "$CURRENT_USER" "$DEST"
+rm -rf "$PAYLOAD"
+
+exit 0
