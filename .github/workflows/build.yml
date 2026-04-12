@@ -15,6 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Stamp version into manifest.xml
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          sed -i '' "s|<Version>.*</Version>|<Version>${VERSION}</Version>|" "Theta Review/manifest.xml"
+          echo "Plugin version set to ${VERSION}"
+
       - name: Stage plugin files
         run: |
           mkdir -p staging/plugin
@@ -51,6 +58,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Stamp version into manifest.xml
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          (Get-Content "Theta Review/manifest.xml") -replace '<Version>.*</Version>', "<Version>$version</Version>" |
+            Set-Content "Theta Review/manifest.xml"
+          Write-Host "Plugin version set to $version"
 
       - name: Stage plugin files
         shell: pwsh
