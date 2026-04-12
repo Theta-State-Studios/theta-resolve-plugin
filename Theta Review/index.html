@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theta Review</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Login Screen -->
+    <div id="screen-login" class="screen active">
+        <div class="login-screen">
+            <div class="login-logo">Theta Review</div>
+            <div class="login-subtitle">Sign in to your portal account</div>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">Name</label>
+                    <input type="text" id="login-name" class="form-input" placeholder="Your name" autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" id="login-password" class="form-input" placeholder="Password" autocomplete="current-password">
+                </div>
+                <div id="login-error" class="login-error hidden"></div>
+                <button type="submit" id="login-btn" class="btn btn-primary login-btn">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Screen 1: Client List -->
+    <div id="screen-clients" class="screen">
+        <div class="header">
+            <span class="header-title">Theta Review</span>
+            <button class="btn-icon" onclick="openSettings()" title="Settings">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M8 4.754a3.246 3.246 0 100 6.492 3.246 3.246 0 000-6.492zM5.754 8a2.246 2.246 0 114.492 0 2.246 2.246 0 01-4.492 0z"/>
+                    <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 01-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 01-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 01.52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 011.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 011.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 01.52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 01-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 01-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 002.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 001.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 00-1.115 2.693l.16.291c.415.764-.421 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 00-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 00-2.692-1.115l-.292.16c-.764.415-1.6-.421-1.184-1.185l.159-.291A1.873 1.873 0 001.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 003.06 4.377l-.16-.292c-.415-.764.421-1.6 1.185-1.184l.292.159a1.873 1.873 0 002.692-1.115l.094-.319z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="search-input" class="search-input" placeholder="Search clients..." oninput="filterClients()">
+        </div>
+        <div class="content" id="client-list"></div>
+    </div>
+
+    <!-- Screen 2: Client Reviews -->
+    <div id="screen-reviews" class="screen">
+        <div class="header">
+            <div class="header-left">
+                <button class="btn-icon" onclick="goBackToClients()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 010 .708L5.707 8l5.647 5.646a.5.5 0 01-.708.708l-6-6a.5.5 0 010-.708l6-6a.5.5 0 01.708 0z"/>
+                    </svg>
+                </button>
+                <span class="header-title" id="client-title"></span>
+            </div>
+        </div>
+        <div class="status-filter-bar" id="status-filter"></div>
+        <div class="content" id="review-list"></div>
+    </div>
+
+    <!-- Screen: Comments -->
+    <div id="screen-comments" class="screen">
+        <div class="header">
+            <div class="header-left">
+                <button class="btn-icon" onclick="goBackFromComments()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 010 .708L5.707 8l5.647 5.646a.5.5 0 01-.708.708l-6-6a.5.5 0 010-.708l6-6a.5.5 0 01.708 0z"/>
+                    </svg>
+                </button>
+                <span class="header-title" id="comments-title"></span>
+            </div>
+            <span class="header-meta text-muted" id="comments-version"></span>
+        </div>
+        <div class="content" id="comments-list"></div>
+    </div>
+
+    <!-- Screen 3: Render & Upload Progress -->
+    <div id="screen-progress" class="screen">
+        <div class="header">
+            <span class="header-title" id="progress-title">Uploading...</span>
+        </div>
+        <div class="content">
+            <div class="progress-screen">
+                <div class="progress-step" id="step-render">
+                    <div class="step-title">
+                        <span class="step-number">Step 1:</span> Rendering
+                    </div>
+                    <div class="render-status-row" id="render-status-row">
+                        <div class="spinner"></div>
+                        <span class="step-detail" id="render-settings-info">Rendering in Resolve...</span>
+                    </div>
+                </div>
+                <div class="progress-step" id="step-upload">
+                    <div class="step-title">
+                        <span class="step-number">Step 2:</span> Uploading
+                    </div>
+                    <div class="step-waiting" id="upload-step-status">(waiting for render)</div>
+                </div>
+                <div class="progress-step" id="step-portal">
+                    <div class="step-title">
+                        <span class="step-number">Step 3:</span> Updating portal
+                    </div>
+                    <div class="step-waiting" id="portal-step-status">(waiting)</div>
+                </div>
+                <div id="progress-errors"></div>
+            </div>
+        </div>
+        <div class="footer">
+            <button class="btn" onclick="cancelUpload()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Screen 3b: Upload Complete -->
+    <div id="screen-complete" class="screen">
+        <div class="header">
+            <span class="header-title text-success">Upload Complete</span>
+        </div>
+        <div class="content">
+            <div class="success-screen">
+                <div class="success-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Review</span>
+                        <span class="detail-value" id="complete-review-info"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Version</span>
+                        <span class="detail-value" id="complete-version"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Status</span>
+                        <span class="detail-value" id="complete-status"></span>
+                    </div>
+                </div>
+                <div class="form-label mb-4">Review Link</div>
+                <div class="review-link" id="complete-review-link"></div>
+                <div class="success-actions">
+                    <button class="btn btn-primary" onclick="openCompletedReview()">Open Review</button>
+                    <button class="btn" id="copy-link-btn" onclick="copyReviewLink()">Copy Link</button>
+                </div>
+                <div class="jira-updates mt-8">
+                    <div class="form-label mb-4">Jira Updated</div>
+                    <div class="jira-update-item">Status &rarr; Internal Review</div>
+                    <div class="jira-update-item">Review link field set</div>
+                    <div class="jira-update-item">Comment posted</div>
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <button class="btn" onclick="backToReviewsFromComplete()">Back to Reviews</button>
+        </div>
+    </div>
+
+    <!-- Screen 4: Settings -->
+    <div id="screen-settings" class="screen">
+        <div class="header">
+            <div class="header-left">
+                <button class="btn-icon" onclick="goBackFromSettings()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 010 .708L5.707 8l5.647 5.646a.5.5 0 01-.708.708l-6-6a.5.5 0 010-.708l6-6a.5.5 0 01.708 0z"/>
+                    </svg>
+                </button>
+                <span class="header-title">Settings</span>
+            </div>
+        </div>
+        <div class="content">
+            <div class="settings-form">
+                <!-- Account section -->
+                <div id="settings-user-section" class="form-group hidden">
+                    <label class="form-label">Account</label>
+                    <div class="settings-account-row">
+                        <span id="settings-user-name" class="settings-account-name"></span>
+                        <button class="btn btn-small" onclick="handleLogout()">Log Out</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Export Quality</label>
+                    <div class="radio-group">
+                        <div class="radio-option" data-preset="proxy" onclick="selectPreset('proxy')">
+                            <div class="radio-dot"></div>
+                            <span>Proxy (720p &middot; 5 Mbps)</span>
+                        </div>
+                        <div class="radio-option selected" data-preset="review" onclick="selectPreset('review')">
+                            <div class="radio-dot"></div>
+                            <span>Review (1080p &middot; 5 Mbps)</span>
+                        </div>
+                        <div class="radio-option" data-preset="high" onclick="selectPreset('high')">
+                            <div class="radio-dot"></div>
+                            <span>High (1080p &middot; 20 Mbps)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="toggle-row">
+                        <label class="form-label">Keep local copies</label>
+                        <div class="toggle" id="settings-keep-local" onclick="toggleKeepLocal()">
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Output Folder</label>
+                    <input type="text" id="settings-output-dir" class="form-input" placeholder="/tmp/theta-review-exports">
+                </div>
+            </div>
+        </div>
+        <div class="footer">
+            <button class="btn btn-primary" onclick="saveSettings()" style="width:100%">Save</button>
+        </div>
+    </div>
+
+    <!-- Add Deliverable Modal -->
+    <div id="modal-overlay" class="modal-overlay hidden" onclick="closeModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-title" id="modal-title">Add Deliverable</div>
+            <input type="hidden" id="modal-jira-key">
+            <input type="hidden" id="modal-deliverable-id">
+            <input type="hidden" id="modal-mode">
+            <div class="form-group">
+                <label class="form-label">Deliverable Label</label>
+                <input type="text" id="modal-label-input" class="form-input" placeholder="e.g. Office Tour Reel">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" id="modal-confirm-btn" onclick="confirmModal()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

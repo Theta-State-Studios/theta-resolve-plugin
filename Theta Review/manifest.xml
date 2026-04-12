@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BlackmagicDesign>
+    <Plugin>
+        <Id>com.theta-studios.review</Id>
+        <Name>Theta Review</Name>
+        <Version>1.0.0</Version>
+        <Description>Upload review proxies to the Theta Review Portal</Description>
+        <FilePath>main.js</FilePath>
+    </Plugin>
+</BlackmagicDesign>

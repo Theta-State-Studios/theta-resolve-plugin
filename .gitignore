@@ -1,0 +1,19 @@
+node_modules/
+dist/
+
+# Credentials — contains auth tokens and secrets
+Theta Review/credentials.json
+
+# Dev-only config (editors' configs live in userData after install)
+Theta Review/config.json
+
+# electron-builder cache
+Theta Review/.webpack/
+
+# Old root-level .node (replaced by native/)
+Theta Review/WorkflowIntegration.node
+
+# Build artifacts and system files
+*.zip
+.DS_Store
+.claude/

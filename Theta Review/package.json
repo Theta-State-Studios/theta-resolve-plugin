@@ -1,0 +1,76 @@
+{
+    "name": "theta-review",
+    "version": "1.1.0",
+    "description": "Upload review proxies to the Theta Review Portal",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "dist:mac": "electron-builder --mac",
+        "dist:win": "electron-builder --win",
+        "dist": "electron-builder --mac --win"
+    },
+    "dependencies": {
+        "electron-updater": "^6.3.9"
+    },
+    "devDependencies": {
+        "electron": "^41.0.0",
+        "electron-builder": "^25.1.8"
+    },
+    "build": {
+        "appId": "com.theta-studios.review",
+        "productName": "Theta Review",
+        "copyright": "Copyright © 2025 Theta State Studios",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "**/*",
+            "!native/**",
+            "!dist/**",
+            "!node_modules/.cache/**"
+        ],
+        "asar": true,
+        "mac": {
+            "target": [
+                { "target": "dmg", "arch": ["universal"] }
+            ],
+            "category": "public.app-category.productivity",
+            "icon": "img/icon.png",
+            "identity": null,
+            "extraResources": [
+                {
+                    "from": "native/mac/WorkflowIntegration.node",
+                    "to": "WorkflowIntegration.node"
+                }
+            ]
+        },
+        "dmg": {
+            "title": "Theta Review ${version}",
+            "background": null,
+            "window": { "width": 540, "height": 380 }
+        },
+        "win": {
+            "target": [
+                { "target": "nsis", "arch": ["x64"] }
+            ],
+            "icon": "img/icon.png",
+            "extraResources": [
+                {
+                    "from": "native/win/WorkflowIntegration.node",
+                    "to": "WorkflowIntegration.node"
+                }
+            ]
+        },
+        "nsis": {
+            "oneClick": true,
+            "perMachine": false,
+            "allowToChangeInstallationDirectory": false,
+            "deleteAppDataOnUninstall": false
+        },
+        "publish": {
+            "provider": "github",
+            "owner": "Theta-State-Studios",
+            "repo": "theta-resolve-plugin"
+        }
+    }
+}
