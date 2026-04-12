@@ -972,7 +972,7 @@ async function checkPortalVersion() {
 
         const res = await fetch(`${config.portal_url}/api/plugin/version`);
         if (!res.ok) return;
-        const { version: latest } = await res.json();
+        const { version: latest, downloads } = await res.json();
         const current = currentPluginVersion();
 
         if (compareVersions(latest, current) > 0) {
@@ -980,17 +980,93 @@ async function checkPortalVersion() {
                 type: 'info',
                 title: 'Update Available',
                 message: `Theta Review ${latest} is available (you have ${current}).`,
-                detail: 'Download the new installer from GitHub and run it to update.',
-                buttons: ['Download', 'Later'],
+                detail: 'Download and install now? Resolve will need to be restarted after.',
+                buttons: ['Update Now', 'Later'],
                 defaultId: 0,
             });
             if (response === 0) {
-                shell.openExternal('https://github.com/Theta-State-Studios/theta-resolve-plugin/releases/latest');
+                const url = process.platform === 'win32' ? downloads?.win : downloads?.mac;
+                if (url) {
+                    await downloadAndInstall(latest, url);
+                } else {
+                    shell.openExternal('https://github.com/Theta-State-Studios/theta-resolve-plugin/releases/latest');
+                }
             }
         }
     } catch {
         // Silently ignore — offline, portal unreachable, etc.
     }
+}
+
+async function downloadAndInstall(version, url) {
+    const isWin = process.platform === 'win32';
+    const ext      = isWin ? 'exe' : 'pkg';
+    const platform = isWin ? 'windows' : 'mac';
+    const filename = `ThetaReview-v${version}-${platform}.${ext}`;
+    const destDir  = isWin ? os.tmpdir() : path.join(os.homedir(), 'Downloads');
+    const destPath = path.join(destDir, filename);
+
+    try {
+        // Show a non-blocking downloading notice via the window title
+        if (mainWindow) mainWindow.setTitle('Theta Review — Downloading update…');
+
+        await downloadFile(url, destPath);
+
+        if (mainWindow) mainWindow.setTitle('Theta Review');
+
+        await dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Ready to Install',
+            message: 'Download complete.',
+            detail: 'The installer will open now. Restart DaVinci Resolve after it finishes.',
+            buttons: ['Open Installer'],
+        });
+
+        shell.openPath(destPath);
+    } catch {
+        if (mainWindow) mainWindow.setTitle('Theta Review');
+        const { response } = await dialog.showMessageBox(mainWindow, {
+            type: 'error',
+            title: 'Download Failed',
+            message: 'Could not download the update.',
+            detail: 'You can download it manually from the releases page.',
+            buttons: ['Open Releases Page', 'Cancel'],
+        });
+        if (response === 0) {
+            shell.openExternal('https://github.com/Theta-State-Studios/theta-resolve-plugin/releases/latest');
+        }
+    }
+}
+
+function downloadFile(url, destPath) {
+    return new Promise((resolve, reject) => {
+        const file = fs.createWriteStream(destPath);
+
+        function doRequest(requestUrl) {
+            const lib = requestUrl.startsWith('https') ? https : http;
+            lib.get(requestUrl, { headers: { 'User-Agent': 'theta-review-plugin' } }, (res) => {
+                if (res.statusCode === 301 || res.statusCode === 302) {
+                    doRequest(res.headers.location);
+                    return;
+                }
+                if (res.statusCode !== 200) {
+                    file.close();
+                    fs.unlink(destPath, () => {});
+                    reject(new Error(`HTTP ${res.statusCode}`));
+                    return;
+                }
+                res.pipe(file);
+                file.on('finish', () => file.close(resolve));
+                file.on('error', (err) => { fs.unlink(destPath, () => {}); reject(err); });
+            }).on('error', (err) => {
+                file.close();
+                fs.unlink(destPath, () => {});
+                reject(err);
+            });
+        }
+
+        doRequest(url);
+    });
 }
 
 app.on('window-all-closed', () => {
