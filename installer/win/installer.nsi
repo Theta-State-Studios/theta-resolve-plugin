@@ -7,12 +7,12 @@ Unicode True
 !define APP_NAME    "Theta Review"
 !define PUBLISHER   "Theta State Studios"
 !define APP_ID      "com.theta-studios.review"
-!define INSTALL_DIR "$APPDATA\Blackmagic Design\DaVinci Resolve\Support\Workflow Integration Plugins\Theta Review"
+!define INSTALL_DIR "$PROGRAMDATA\Blackmagic Design\DaVinci Resolve\Support\Workflow Integration Plugins\Theta Review"
 
 Name            "${APP_NAME} ${VERSION}"
 OutFile         "ThetaReview-${VERSION}-windows.exe"
 InstallDir      "${INSTALL_DIR}"
-RequestExecutionLevel user
+RequestExecutionLevel admin
 ShowInstDetails show
 SetCompressor   lzma
 
@@ -23,7 +23,7 @@ SetCompressor   lzma
   !define MUI_ICON "${ICONFILE}"
 !endif
 !define MUI_WELCOMEPAGE_TITLE "Theta Review ${VERSION}"
-!define MUI_WELCOMEPAGE_TEXT  "This will install the Theta Review plugin for DaVinci Resolve.$\r$\n$\r$\nThe plugin will be placed in:$\r$\n$APPDATA\Blackmagic Design\DaVinci Resolve\Support\Workflow Integration Plugins\$\r$\n$\r$\nClick Install to continue."
+!define MUI_WELCOMEPAGE_TEXT  "This will install the Theta Review plugin for DaVinci Resolve.$\r$\n$\r$\nThe plugin will be placed in:$\r$\nC:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\Workflow Integration Plugins\$\r$\n$\r$\nAdministrator access is required. Click Install to continue."
 !define MUI_FINISHPAGE_TITLE  "Installation Complete"
 !define MUI_FINISHPAGE_TEXT   "Theta Review has been installed.$\r$\n$\r$\nRestart DaVinci Resolve, then open the plugin from:$\r$\nWorkspace → Workflow Integrations → Theta Review"
 
